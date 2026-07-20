@@ -1,0 +1,65 @@
+services:
+  vuln-alert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vuln-alert-service
+    restart: unless-stopped
+
+    # Security hardening (§4)
+    read_only: true          # root FS is read-only; only /data volume is writable
+    cap_drop:
+      - ALL                  # drop all Linux capabilities
+    security_opt:
+      - no-new-privileges:true
+
+    # Single writable volume for the bbolt data file.
+    volumes:
+      - vuln-data:/data
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      # ── Required ─────────────────────────────────────
+      - TEAMS_WEBHOOK_URL=${TEAMS_WEBHOOK_URL}
+      - NVD_API_KEY=${NVD_API_KEY}
+      - RUN_NOW_TOKEN=${RUN_NOW_TOKEN}
+
+      # ── Optional — uncomment to override defaults ─────
+      - TZ=${TZ:-Asia/Kolkata}
+      - DATA_DIR=/data
+      - SOURCES_PATH=/config/sources.yaml
+      - MIN_ALERT_SEVERITY=${MIN_ALERT_SEVERITY:-LOW}
+      - FAILURE_ALERT_THRESHOLD=${FAILURE_ALERT_THRESHOLD:-3}
+      - RETENTION_DAYS=${RETENTION_DAYS:-30}
+      - LOG_RETENTION_DAYS=${LOG_RETENTION_DAYS:-30}
+      - WEEKLY_DIGEST_DAY=${WEEKLY_DIGEST_DAY:-Monday}
+
+      # ── Optional webhooks ─────────────────────────────
+      # - CRITICAL_WEBHOOK_URL=${CRITICAL_WEBHOOK_URL}
+      # - WEEKLY_DIGEST_WEBHOOK_URL=${WEEKLY_DIGEST_WEBHOOK_URL}
+
+      # ── Optional tokens ───────────────────────────────
+      # - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+    # Writable /tmp for any Go standard library needs.
+    tmpfs:
+      - /tmp:size=50m,mode=1777
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+volumes:
+  vuln-data:
+    driver: local

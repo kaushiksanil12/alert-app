@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VulnWatch — Security Vulnerability Dashboard</title>
+  <meta name="description" content="Internal security vulnerability monitoring dashboard. Tracks CVEs across 18 technologies with real-time alerting.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base:    #070b14;
+      --bg-card:    #0d1526;
+      --bg-card2:   #111c33;
+      --bg-hover:   #162040;
+      --border:     #1e2d4a;
+      --border-lit: #2a3f6a;
+      --text-1:     #e8edf5;
+      --text-2:     #8fa3c8;
+      --text-3:     #4d6080;
+      --accent:     #3b82f6;
+      --accent-glow:#1d4ed8;
+      --grad-start: #1a237e;
+      --grad-end:   #0d1526;
+
+      --crit:  #ef4444; --crit-bg:  rgba(239,68,68,.12);
+      --high:  #f97316; --high-bg:  rgba(249,115,22,.12);
+      --med:   #eab308; --med-bg:   rgba(234,179,8,.12);
+      --low:   #22c55e; --low-bg:   rgba(34,197,94,.12);
+      --unk:   #6b7280; --unk-bg:   rgba(107,114,128,.12);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-1);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--grad-start) 0%, var(--grad-end) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky; top: 0; z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px; gap: 1rem;
+    }
+    .logo {
+      display: flex; align-items: center; gap: .75rem;
+      font-weight: 700; font-size: 1.25rem; letter-spacing: -.025em;
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .header-meta { font-size: .8rem; color: var(--text-2); }
+    .header-meta strong { color: var(--text-1); }
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .45rem 1rem; border-radius: 8px; font-size: .85rem;
+      font-weight: 500; cursor: pointer; border: none; transition: all .2s;
+      text-decoration: none; font-family: inherit;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+    }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 15px rgba(59,130,246,.35); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--border-lit); color: var(--text-1); background: var(--bg-hover); }
+    .btn-sm { padding: .3rem .7rem; font-size: .78rem; border-radius: 6px; }
+
+    /* ── Layout ───────────────────────────────────────── */
+    .main { max-width: 1400px; margin: 0 auto; padding: 2rem; }
+
+    /* ── Stat cards ───────────────────────────────────── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.25rem 1.5rem; position: relative; overflow: hidden;
+      transition: border-color .2s, transform .2s;
+    }
+    .stat-card::before {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      background: linear-gradient(135deg, rgba(59,130,246,.05) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .stat-card:hover { border-color: var(--border-lit); transform: translateY(-2px); }
+    .stat-label { font-size: .78rem; color: var(--text-2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: .5rem; }
+    .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-sub { font-size: .78rem; color: var(--text-3); margin-top: .25rem; }
+    .stat-critical .stat-value { color: var(--crit); }
+    .stat-high .stat-value { color: var(--high); }
+    .stat-new .stat-value { color: var(--accent); }
+
+    /* ── Section heading ──────────────────────────────── */
+    .section { margin-bottom: 2rem; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 1rem; gap: 1rem;
+    }
+    .section-title {
+      font-size: 1rem; font-weight: 600; color: var(--text-1);
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .section-title::before {
+      content: ''; display: inline-block; width: 3px; height: 18px;
+      background: var(--accent); border-radius: 2px;
+    }
+
+    /* ── Source status grid ───────────────────────────── */
+    .sources-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: .75rem;
+    }
+    .source-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: .75rem;
+      transition: border-color .2s;
+    }
+    .source-card.ok { border-left: 3px solid #22c55e; }
+    .source-card.err { border-left: 3px solid var(--crit); }
+    .source-card.unknown { border-left: 3px solid var(--text-3); }
+    .source-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 6px;
+    }
+    .dot-ok { background: #22c55e; box-shadow: 0 0 6px #22c55e; animation: pulse-green 2s infinite; }
+    .dot-err { background: var(--crit); box-shadow: 0 0 6px var(--crit); animation: pulse-red 1s infinite; }
+    .dot-unk { background: var(--text-3); }
+    @keyframes pulse-green { 0%,100%{opacity:1} 50%{opacity:.5} }
+    @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .source-info { flex: 1; min-width: 0; }
+    .source-name { font-size: .88rem; font-weight: 600; color: var(--text-1); margin-bottom: .2rem; }
+    .source-meta { font-size: .75rem; color: var(--text-3); }
+    .source-meta .findings-badge {
+      display: inline-block; background: var(--bg-hover);
+      border-radius: 4px; padding: .05rem .35rem; color: var(--accent); font-weight: 600;
+    }
+
+    /* ── Filters bar ──────────────────────────────────── */
+    .filters-bar {
+      display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: .75rem 1rem; margin-bottom: 1.25rem;
+    }
+    .filter-label { font-size: .82rem; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+    .filter-select {
+      background: var(--bg-base); border: 1px solid var(--border); color: var(--text-1);
+      border-radius: 6px; padding: .35rem .7rem; font-size: .82rem; font-family: inherit;
+      cursor: pointer; transition: border-color .2s;
+    }
+    .filter-select:focus { outline: none; border-color: var(--accent); }
+    .toggle-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--text-2);
+      border-radius: 6px; padding: .35rem .9rem; font-size: .82rem; font-family: inherit;
+      cursor: pointer; transition: all .2s;
+    }
+    .toggle-btn.active { background: rgba(59,130,246,.15); border-color: var(--accent); color: var(--accent); }
+
+    /* ── Findings table ───────────────────────────────── */
+    .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+    thead { background: var(--bg-card2); }
+    th {
+      padding: .85rem 1rem; text-align: left; font-size: .75rem; font-weight: 600;
+      color: var(--text-2); text-transform: uppercase; letter-spacing: .06em;
+      white-space: nowrap; border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg-hover); }
+    td { padding: .8rem 1rem; color: var(--text-1); vertical-align: middle; }
+    td:first-child { font-family: 'JetBrains Mono', monospace; font-size: .8rem; }
+
+    /* Severity badge */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: .2rem .6rem; border-radius: 5px; font-size: .75rem; font-weight: 600;
+      letter-spacing: .03em; white-space: nowrap;
+    }
+    .sev-critical { background: var(--crit-bg); color: var(--crit); border: 1px solid rgba(239,68,68,.3); }
+    .sev-high     { background: var(--high-bg); color: var(--high); border: 1px solid rgba(249,115,22,.3); }
+    .sev-medium   { background: var(--med-bg);  color: var(--med);  border: 1px solid rgba(234,179,8,.3); }
+    .sev-low      { background: var(--low-bg);  color: var(--low);  border: 1px solid rgba(34,197,94,.3); }
+    .sev-unknown  { background: var(--unk-bg);  color: var(--unk);  border: 1px solid rgba(107,114,128,.3); }
+
+    .cve-link {
+      color: var(--accent); text-decoration: none; font-family: 'JetBrains Mono', monospace; font-size: .8rem;
+    }
+    .cve-link:hover { text-decoration: underline; color: #60a5fa; }
+
+    .tech-tag {
+      display: inline-block; background: var(--bg-hover); border: 1px solid var(--border);
+      border-radius: 5px; padding: .15rem .5rem; font-size: .78rem; color: var(--text-2);
+    }
+    .desc-cell { max-width: 320px; color: var(--text-2); font-size: .82rem; }
+    .desc-cell .truncate { 
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .fix-version { font-family: 'JetBrains Mono', monospace; font-size: .78rem; color: var(--low); }
+    .date-cell { color: var(--text-3); font-size: .8rem; white-space: nowrap; }
+
+    .ack-btn {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .25rem .6rem; border-radius: 5px; font-size: .75rem; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border); background: transparent;
+      color: var(--text-2); font-family: inherit; transition: all .15s;
+    }
+    .ack-btn:hover { background: var(--bg-hover); border-color: var(--border-lit); color: var(--text-1); }
+    .ack-btn.acked { color: var(--low); border-color: rgba(34,197,94,.3); background: var(--low-bg); }
+    .ack-badge {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .15rem .5rem; border-radius: 5px; font-size: .75rem;
+      background: rgba(34,197,94,.1); color: var(--low); border: 1px solid rgba(34,197,94,.2);
+    }
+
+    /* Empty state */
+    .empty-state {
+      padding: 4rem 2rem; text-align: center;
+      color: var(--text-3); font-size: .95rem;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; opacity: .5; }
+    .empty-state p { margin-top: .5rem; font-size: .85rem; }
+
+    /* ── Toast ────────────────────────────────────────── */
+    .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; display: flex; flex-direction: column; gap: .5rem; }
+    .toast {
+      background: var(--bg-card2); border: 1px solid var(--border-lit);
+      border-radius: 10px; padding: .8rem 1.25rem; font-size: .85rem; color: var(--text-1);
+      box-shadow: 0 8px 30px rgba(0,0,0,.4); min-width: 260px;
+      animation: slideUp .3s ease; display: flex; align-items: center; gap: .5rem;
+    }
+    .toast.success { border-left: 3px solid var(--low); }
+    .toast.error   { border-left: 3px solid var(--crit); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* ── Responsive ───────────────────────────────────── */
+    @media (max-width: 768px) {
+      .main { padding: 1rem; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .header-meta { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🛡️</div>
+      <span>VulnWatch</span>
+    </div>
+    <div class="header-meta">Last scan: <strong>{{.LastRun}}</strong></div>
+    <button class="btn btn-primary" id="runNowBtn" onclick="triggerRunNow()">
+      ▶ Run Now
+    </button>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ── Stats ──────────────────────────────────────── -->
+  <div class="stats-grid">
+    <div class="stat-card stat-new">
+      <div class="stat-label">Total Findings</div>
+      <div class="stat-value" id="totalCount">{{.TotalFindings}}</div>
+      <div class="stat-sub">in current view</div>
+    </div>
+    <div class="stat-card stat-new">
+      <div class="stat-label">New (Last 24h)</div>
+      <div class="stat-value">{{.NewToday}}</div>
+      <div class="stat-sub">requiring attention</div>
+    </div>
+    <div class="stat-card stat-critical">
+      <div class="stat-label">Sources Monitored</div>
+      <div class="stat-value" style="color:var(--accent)">{{len .Sources}}</div>
+      <div class="stat-sub">technologies tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last Scan</div>
+      <div class="stat-value" style="font-size:1rem;padding-top:.5rem">{{.LastRun}}</div>
+      <div class="stat-sub">scheduled daily midnight</div>
+    </div>
+  </div>
+
+  <!-- ── Source Status ──────────────────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Source Status</h2>
+    </div>
+    <div class="sources-grid">
+      {{range .Sources}}
+      <div class="source-card {{if .LastAttempt}}{{if .OK}}ok{{else}}err{{end}}{{else}}unknown{{end}}">
+        <div class="source-dot {{if .LastAttempt}}{{if .OK}}dot-ok{{else}}dot-err{{end}}{{else}}dot-unk{{end}}"></div>
+        <div class="source-info">
+          <div class="source-name">{{.Name}}</div>
+          <div class="source-meta">
+            {{if .LastAttempt}}
+              Last: {{.LastAttempt}} &nbsp;
+              {{if gt .FindingsThisRun 0}}<span class="findings-badge">+{{.FindingsThisRun}}</span>{{end}}
+              {{if not .OK}}<br><span style="color:var(--crit);font-size:.72rem">{{.Error}}</span>{{end}}
+              {{if gt .ConsecutiveFailures 0}}<br><span style="color:var(--high)">⚠ {{.ConsecutiveFailures}} consecutive failures</span>{{end}}
+            {{else}}
+              <span style="color:var(--text-3)">Pending first run</span>
+            {{end}}
+          </div>
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </section>
+
+  <!-- ── Findings ───────────────────────────────────── -->
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">Vulnerability Findings</h2>
+      <a href="/api/export.csv{{if .SeverityFilter}}?severity={{.SeverityFilter}}{{end}}" class="btn btn-ghost btn-sm">
+        ↓ Export CSV
+      </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-bar">
+      <span class="filter-label">Filter:</span>
+      <form method="GET" action="/" style="display:contents" id="filterForm">
+        <select class="filter-select" name="severity" onchange="document.getElementById('filterForm').submit()" id="severityFilter">
+          <option value="" {{if eq .SeverityFilter ""}}selected{{end}}>All Severities</option>
+          <option value="CRITICAL" {{if eq .SeverityFilter "CRITICAL"}}selected{{end}}>Critical</option>
+          <option value="HIGH"     {{if eq .SeverityFilter "HIGH"}}selected{{end}}>High</option>
+          <option value="MEDIUM"   {{if eq .SeverityFilter "MEDIUM"}}selected{{end}}>Medium</option>
+          <option value="LOW"      {{if eq .SeverityFilter "LOW"}}selected{{end}}>Low</option>
+        </select>
+        {{if .ShowAcknowledged}}<input type="hidden" name="show_acknowledged" value="1">{{end}}
+        <button type="button" class="toggle-btn {{if .ShowAcknowledged}}active{{end}}" onclick="toggleAck()">
+          {{if .ShowAcknowledged}}✓ Showing Acknowledged{{else}}Show Acknowledged{{end}}
+        </button>
+      </form>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      {{if .Findings}}
+      <table>
+        <thead>
+          <tr>
+            <th>CVE ID</th>
+            <th>Technology</th>
+            <th>Severity</th>
+            <th>Description</th>
+            <th>Fixed In</th>
+            <th>Published</th>
+            <th>First Seen</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{range .Findings}}
+          <tr id="row-{{.Source}}-{{.CVEID}}" {{if .Acknowledged}}style="opacity:.55"{{end}}>
+            <td>
+              {{if .URL}}
+                <a class="cve-link" href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.CVEID}}</a>
+              {{else}}
+                <span class="cve-link" style="color:var(--text-2)">{{.CVEID}}</span>
+              {{end}}
+            </td>
+            <td><span class="tech-tag">{{.Technology}}</span></td>
+            <td><span class="badge {{severityClass .Severity}}">{{.Severity}}</span></td>
+            <td class="desc-cell"><div class="truncate">{{.Description}}</div></td>
+            <td>{{if .FixedVersion}}<span class="fix-version">{{.FixedVersion}}</span>{{else}}<span style="color:var(--text-3)">—</span>{{end}}</td>
+            <td class="date-cell">{{formatDateOnly .Published}}</td>
+            <td class="date-cell">{{formatTime .FirstSeen}}</td>
+            <td>
+              {{if .Acknowledged}}
+                <button class="ack-btn acked" onclick="unacknowledge('{{.Source}}', '{{.CVEID}}')">✓ Acked</button>
+              {{else}}
+                <button class="ack-btn" onclick="acknowledge('{{.Source}}', '{{.CVEID}}')">Acknowledge</button>
+              {{end}}
+            </td>
+          </tr>
+          {{end}}
+        </tbody>
+      </table>
+      {{else}}
+      <div class="empty-state">
+        <div class="icon">🎉</div>
+        <strong>No findings match the current filters.</strong>
+        <p>Run a scan or adjust your severity filter.</p>
+      </div>
+      {{end}}
+    </div>
+  </section>
+
+</main>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  // RUN_NOW_TOKEN must be provided externally (e.g., via HTTP-only meta tag or prompt).
+  // For internal tooling, we prompt once per session and store in sessionStorage.
+  function getToken() {
+    let t = sessionStorage.getItem('vnw_tok');
+    if (!t) {
+      t = prompt('Enter RUN_NOW_TOKEN to authenticate write actions:');
+      if (t) sessionStorage.setItem('vnw_tok', t);
+    }
+    return t;
+  }
+
+  function triggerRunNow() {
+    const token = getToken();
+    if (!token) return;
+    const btn = document.getElementById('runNowBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Triggering…';
+    fetch('/api/run-now', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+      if (r.status === 401) { sessionStorage.removeItem('vnw_tok'); toast('Invalid token — cleared', 'error'); }
+      else if (r.ok) { toast('✓ Run triggered — check back in a few minutes', 'success'); }
+      else { toast('Failed to trigger run (HTTP ' + r.status + ')', 'error'); }
+    }).catch(e => toast('Network error: ' + e, 'error'))
+    .finally(() => { btn.disabled = false; btn.textContent = '▶ Run Now'; });
+  }
+
+  function acknowledge(source, cveID) {
+    const token = getToken();
+    if (!token) return;
+    fetch(`/api/acknowledge/${encodeURIComponent(source)}/${encodeURIComponent(cveID)}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+      if (r.status === 401) { sessionStorage.removeItem('vnw_tok'); toast('Invalid token', 'error'); }
+      else if (r.ok) { toast('Finding acknowledged', 'success'); setTimeout(() => location.reload(), 800); }
+      else toast('Error acknowledging (HTTP ' + r.status + ')', 'error');
+    }).catch(e => toast('Network error: ' + e, 'error'));
+  }
+
+  function unacknowledge(source, cveID) {
+    const token = getToken();
+    if (!token) return;
+    fetch(`/api/unacknowledge/${encodeURIComponent(source)}/${encodeURIComponent(cveID)}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+      if (r.ok) { toast('Acknowledgement removed', 'info'); setTimeout(() => location.reload(), 800); }
+      else toast('Error (HTTP ' + r.status + ')', 'error');
+    }).catch(e => toast('Network error: ' + e, 'error'));
+  }
+
+  function toggleAck() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('show_acknowledged') === '1') {
+      url.searchParams.delete('show_acknowledged');
+    } else {
+      url.searchParams.set('show_acknowledged', '1');
+    }
+    window.location.href = url.toString();
+  }
+
+  function toast(msg, type = 'info') {
+    const c = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = `toast ${type}`;
+    el.textContent = msg;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+</script>
+</body>
+</html>

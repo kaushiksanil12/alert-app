@@ -1,0 +1,125 @@
+sources:
+  # ─── Node.js Runtime ───────────────────────────────────────────────────────
+  - name: nodejs_runtime
+    technology: "Node.js"
+    type: nodejs_rss
+    url: https://nodejs.org/en/feed/vulnerability.xml
+
+  # ─── Java / OpenJDK ────────────────────────────────────────────────────────
+  - name: java_openjdk
+    technology: "Java / OpenJDK"
+    type: nvd
+    keyword: "openjdk"
+    min_severity: HIGH
+
+  # ─── C++ / GCC ─────────────────────────────────────────────────────────────
+  - name: cpp_gcc
+    technology: "C++ / GCC"
+    type: nvd
+    keyword: "gcc compiler"
+    min_severity: HIGH
+
+  # ─── Docker ────────────────────────────────────────────────────────────────
+  - name: docker
+    technology: "Docker"
+    type: nvd
+    keyword: "docker"
+    min_severity: HIGH
+
+  # ─── Git ───────────────────────────────────────────────────────────────────
+  - name: git
+    technology: "Git"
+    type: nvd
+    keyword: "git scm"
+    min_severity: HIGH
+
+  # ─── GitLab ────────────────────────────────────────────────────────────────
+  - name: gitlab
+    technology: "GitLab"
+    type: nvd
+    keyword: "gitlab"
+    min_severity: MEDIUM
+
+  # ─── AWS ───────────────────────────────────────────────────────────────────
+  - name: aws
+    technology: "AWS"
+    type: nvd
+    keyword: "amazon web services"
+    min_severity: HIGH
+
+  # ─── GCP ───────────────────────────────────────────────────────────────────
+  - name: gcp
+    technology: "GCP"
+    type: nvd
+    keyword: "google cloud platform"
+    min_severity: HIGH
+
+  # ─── SonarQube ─────────────────────────────────────────────────────────────
+  - name: sonarqube
+    technology: "SonarQube"
+    type: nvd
+    keyword: "sonarqube"
+    min_severity: MEDIUM
+
+  # ─── React ─────────────────────────────────────────────────────────────────
+  - name: react
+    technology: "React"
+    type: osv
+    ecosystem: npm
+    package: react
+
+  # ─── Python / CPython Runtime ──────────────────────────────────────────────
+  - name: python_cpython
+    technology: "Python / CPython"
+    type: nvd
+    keyword: "cpython"
+    min_severity: HIGH
+
+  # ─── Azure ─────────────────────────────────────────────────────────────────
+  - name: azure
+    technology: "Azure"
+    type: nvd
+    keyword: "microsoft azure"
+    min_severity: HIGH
+
+  # ─── Ubuntu ────────────────────────────────────────────────────────────────
+  - name: ubuntu
+    technology: "Ubuntu"
+    type: vendor_rss
+    url: https://ubuntu.com/security/notices/rss.xml
+    format: rss
+
+  # ─── Trivy ─────────────────────────────────────────────────────────────────
+  - name: trivy
+    technology: "Trivy"
+    type: osv
+    ecosystem: Go
+    package: github.com/aquasecurity/trivy
+
+  # ─── ArgoCD ────────────────────────────────────────────────────────────────
+  - name: argocd
+    technology: "ArgoCD"
+    type: osv
+    ecosystem: Go
+    package: github.com/argoproj/argo-cd/v2
+
+  # ─── Kubernetes ────────────────────────────────────────────────────────────
+  - name: kubernetes
+    technology: "Kubernetes"
+    type: nvd
+    keyword: "kubernetes"
+    min_severity: HIGH
+
+  # ─── Django ────────────────────────────────────────────────────────────────
+  - name: django
+    technology: "Django"
+    type: osv
+    ecosystem: PyPI
+    package: Django
+
+  # ─── Spring Boot ───────────────────────────────────────────────────────────
+  - name: springboot
+    technology: "Spring Boot"
+    type: osv
+    ecosystem: Maven
+    package: org.springframework.boot:spring-boot
