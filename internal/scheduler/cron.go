@@ -186,6 +186,11 @@ func (s *Scheduler) runFetcher(ctx context.Context, f fetchers.Fetcher) []fetche
 		return nil
 	}
 
+	// Global safeguard: limit to 20 vulnerabilities per run per source
+	if len(rawFindings) > 20 {
+		rawFindings = rawFindings[:20]
+	}
+
 	slog.Info("fetcher succeeded", "source", source, "raw_findings", len(rawFindings))
 
 	// First-run baseline check (§3.2).

@@ -2,8 +2,9 @@ sources:
   # ─── Node.js Runtime ───────────────────────────────────────────────────────
   - name: nodejs_runtime
     technology: "Node.js"
-    type: nodejs_rss
-    url: https://nodejs.org/en/feed/vulnerability.xml
+    type: nvd
+    keyword: "node.js"
+    min_severity: HIGH
 
   # ─── Java / OpenJDK ────────────────────────────────────────────────────────
   - name: java_openjdk

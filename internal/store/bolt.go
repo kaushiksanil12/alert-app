@@ -75,19 +75,34 @@ func (s *Store) IsBaselineDone(source string) (bool, error) {
 	return done, err
 }
 
-// MarkBaseline records all current finding IDs as "seen" in the dedup bucket WITHOUT
-// writing full finding records. This prevents a flood of alerts on first run for a
-// new source (§3.2). The dedup entries are indistinguishable from real ones — any
-// future occurrence of these IDs will be treated as already-seen.
+// MarkBaseline records all current finding IDs as "seen" in the dedup bucket and 
+// writes full finding records to the findings bucket so they are visible in the UI,
+// but they do not trigger alerts during the first run.
 func (s *Store) MarkBaseline(source string, findings []fetchers.Finding) error {
 	return s.db.Update(func(tx *bbolt.Tx) error {
 		dedup := tx.Bucket(bucketDedup)
+		findingsBucket := tx.Bucket(bucketFindings)
 		meta := tx.Bucket(bucketSourceMeta)
 
-		tsBytes := unixNanoBytes(time.Now())
+		now := time.Now()
+		tsBytes := unixNanoBytes(now)
 		for _, f := range findings {
-			if err := dedup.Put([]byte(f.DeduplicateKey()), tsBytes); err != nil {
+			key := []byte(source + "\x00" + f.CVEID)
+			if err := dedup.Put(key, tsBytes); err != nil {
 				return fmt.Errorf("baseline dedup put: %w", err)
+			}
+
+			// Store full finding record so it's visible in the UI
+			sf := fetchers.StoredFinding{
+				Finding:   f,
+				FirstSeen: now,
+			}
+			data, err := json.Marshal(sf)
+			if err != nil {
+				return fmt.Errorf("marshal baseline finding: %w", err)
+			}
+			if err := findingsBucket.Put(key, data); err != nil {
+				return fmt.Errorf("baseline findings put: %w", err)
 			}
 		}
 		if err := meta.Put([]byte("baseline\x00"+source), []byte("1")); err != nil {

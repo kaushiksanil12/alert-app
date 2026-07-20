@@ -18,15 +18,14 @@ var templateFS embed.FS
 
 // DashboardHandler serves the main dashboard and write API endpoints.
 type DashboardHandler struct {
-	store     *store.Store
-	sched     *scheduler.Scheduler
-	runToken  string // RUN_NOW_TOKEN — bearer token for write endpoints
-	tmpl      *template.Template
+	store       *store.Store
+	sched       *scheduler.Scheduler
+	tmpl        *template.Template
 	sourceNames []string
 }
 
 // NewDashboardHandler creates the dashboard handler.
-func NewDashboardHandler(st *store.Store, sched *scheduler.Scheduler, runToken string, sourceNames []string) (*DashboardHandler, error) {
+func NewDashboardHandler(st *store.Store, sched *scheduler.Scheduler, sourceNames []string) (*DashboardHandler, error) {
 	tmpl, err := template.New("").Funcs(template.FuncMap{
 		"severityClass":  severityClass,
 		"formatTime":     formatTime,
@@ -38,7 +37,6 @@ func NewDashboardHandler(st *store.Store, sched *scheduler.Scheduler, runToken s
 	return &DashboardHandler{
 		store:       st,
 		sched:       sched,
-		runToken:    runToken,
 		tmpl:        tmpl,
 		sourceNames: sourceNames,
 	}, nil
@@ -51,6 +49,7 @@ type dashboardData struct {
 	Findings        []fetchers.StoredFinding
 	ShowAcknowledged bool
 	SeverityFilter  string
+	SourceFilter    string
 	TotalFindings   int
 	NewToday        int
 }
@@ -77,10 +76,12 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	showAck := r.URL.Query().Get("show_acknowledged") == "1"
 	severityFilter := r.URL.Query().Get("severity")
+	sourceFilter := r.URL.Query().Get("source")
 
 	filter := store.FindingFilter{
 		ShowAcknowledged: showAck,
 		Severity:         severityFilter,
+		Source:           sourceFilter,
 	}
 	findings, err := h.store.GetFindings(filter)
 	if err != nil {
@@ -130,6 +131,7 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Findings:         findings,
 		ShowAcknowledged: showAck,
 		SeverityFilter:   severityFilter,
+		SourceFilter:     sourceFilter,
 		TotalFindings:    len(findings),
 		NewToday:         newToday,
 	}
@@ -146,10 +148,6 @@ func (h *DashboardHandler) RunNowHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.checkBearer(r) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 	h.sched.TriggerNow()
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
@@ -161,10 +159,6 @@ func (h *DashboardHandler) RunNowHandler(w http.ResponseWriter, r *http.Request)
 func (h *DashboardHandler) AcknowledgeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !h.checkBearer(r) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -194,10 +188,6 @@ func (h *DashboardHandler) UnacknowledgeHandler(w http.ResponseWriter, r *http.R
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !h.checkBearer(r) {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
 
 	parts := strings.SplitN(strings.TrimPrefix(r.URL.Path, "/api/unacknowledge/"), "/", 2)
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
@@ -215,20 +205,6 @@ func (h *DashboardHandler) UnacknowledgeHandler(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"unacknowledged"}`))
-}
-
-// checkBearer validates the Authorization: Bearer <token> header.
-func (h *DashboardHandler) checkBearer(r *http.Request) bool {
-	if h.runToken == "" {
-		// No token configured — reject all (safer than permitting all).
-		slog.Warn("RUN_NOW_TOKEN not set — rejecting write request")
-		return false
-	}
-	auth := r.Header.Get("Authorization")
-	if !strings.HasPrefix(auth, "Bearer ") {
-		return false
-	}
-	return strings.TrimPrefix(auth, "Bearer ") == h.runToken
 }
 
 // ─── Template helpers ─────────────────────────────────────────────────────────

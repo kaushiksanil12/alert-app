@@ -15,7 +15,7 @@ import (
 
 const (
 	nvdAPIBase        = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-	nvdResultsPerPage = 100
+	nvdResultsPerPage = 20
 	// NVD rate limits: 5 req/30s without key, 50 req/10s with key.
 	// We sleep between paginated requests to stay within limits.
 	nvdRateSleepNoKey  = 7 * time.Second // ~4 req/30s (safe buffer)
@@ -54,28 +54,14 @@ func (f *NVDFetcher) Fetch(ctx context.Context) ([]Finding, error) {
 	startIndex := 0
 
 	for {
-		batch, total, err := f.fetchPage(ctx, startIndex)
+		batch, _, err := f.fetchPage(ctx, startIndex)
 		if err != nil {
 			return nil, err
 		}
 		all = append(all, batch...)
 
-		next := startIndex + nvdResultsPerPage
-		if next >= total || len(batch) == 0 {
-			break
-		}
-		startIndex = next
-
-		// Rate-limit between paginated calls.
-		sleep := nvdRateSleepWithKey
-		if f.apiKey == "" {
-			sleep = nvdRateSleepNoKey
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(sleep):
-		}
+		// Stop after first page (20 items) to prevent massive baseline flooding
+		break
 	}
 
 	slog.Info("nvd fetch complete", "source", f.name, "findings", len(all))

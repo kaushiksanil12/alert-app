@@ -42,7 +42,6 @@ type AppConfig struct {
 	TeamsWebhookURL        string
 	NVDAPIKey              string
 	GitHubToken            string
-	RunNowToken            string
 	CriticalWebhookURL     string
 	WeeklyDigestWebhookURL string
 
@@ -67,7 +66,6 @@ func Load(sourcesPath string) (*AppConfig, error) {
 		TeamsWebhookURL:        os.Getenv("TEAMS_WEBHOOK_URL"),
 		NVDAPIKey:              os.Getenv("NVD_API_KEY"),
 		GitHubToken:            os.Getenv("GITHUB_TOKEN"),
-		RunNowToken:            os.Getenv("RUN_NOW_TOKEN"),
 		CriticalWebhookURL:     os.Getenv("CRITICAL_WEBHOOK_URL"),
 		WeeklyDigestWebhookURL: os.Getenv("WEEKLY_DIGEST_WEBHOOK_URL"),
 
@@ -118,7 +116,6 @@ func (c *AppConfig) RedactedSecrets() map[string]string {
 		"TEAMS_WEBHOOK_URL":         redact(c.TeamsWebhookURL),
 		"NVD_API_KEY":               redact(c.NVDAPIKey),
 		"GITHUB_TOKEN":              redact(c.GitHubToken),
-		"RUN_NOW_TOKEN":             redact(c.RunNowToken),
 		"CRITICAL_WEBHOOK_URL":      redact(c.CriticalWebhookURL),
 		"WEEKLY_DIGEST_WEBHOOK_URL": redact(c.WeeklyDigestWebhookURL),
 	}

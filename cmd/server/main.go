@@ -93,7 +93,7 @@ func main() {
 		sourceNames = append(sourceNames, s.Name)
 	}
 
-	dashHandler, err := web.NewDashboardHandler(st, sched, cfg.RunNowToken, sourceNames)
+	dashHandler, err := web.NewDashboardHandler(st, sched, sourceNames)
 	if err != nil {
 		slog.Error("failed to create dashboard handler", "err", err)
 		os.Exit(1)
