@@ -50,28 +50,38 @@ func NewNVDFetcher(name, technology, keyword, minSeverity, apiKey string) *NVDFe
 func (f *NVDFetcher) Name() string { return f.name }
 
 func (f *NVDFetcher) Fetch(ctx context.Context) ([]Finding, error) {
-	var all []Finding
-	startIndex := 0
-
-	for {
-		batch, _, err := f.fetchPage(ctx, startIndex)
-		if err != nil {
-			return nil, err
-		}
-		all = append(all, batch...)
-
-		// Stop after first page (20 items) to prevent massive baseline flooding
-		break
+	// 1. Fetch exactly 1 item to get TotalResults (NVD sorts oldest first)
+	_, totalResults, err := f.fetchPage(ctx, 0, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	slog.Info("nvd fetch complete", "source", f.name, "findings", len(all))
-	return all, nil
+	if totalResults == 0 {
+		slog.Info("nvd fetch complete", "source", f.name, "findings", 0)
+		return nil, nil
+	}
+
+	// 2. Compute startIndex for the last page of up to 20 results.
+	// Since NVD returns oldest first by default, the newest are at the end.
+	startIndex := totalResults - nvdResultsPerPage
+	if startIndex < 0 {
+		startIndex = 0
+	}
+
+	// 3. Fetch the actual newest results
+	batch, _, err := f.fetchPage(ctx, startIndex, nvdResultsPerPage)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Info("nvd fetch complete", "source", f.name, "findings", len(batch))
+	return batch, nil
 }
 
-func (f *NVDFetcher) fetchPage(ctx context.Context, startIndex int) ([]Finding, int, error) {
+func (f *NVDFetcher) fetchPage(ctx context.Context, startIndex, resultsPerPage int) ([]Finding, int, error) {
 	params := url.Values{}
 	params.Set("keywordSearch", f.keyword)
-	params.Set("resultsPerPage", fmt.Sprintf("%d", nvdResultsPerPage))
+	params.Set("resultsPerPage", fmt.Sprintf("%d", resultsPerPage))
 	params.Set("startIndex", fmt.Sprintf("%d", startIndex))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, nvdAPIBase+"?"+params.Encode(), nil)
@@ -79,9 +89,11 @@ func (f *NVDFetcher) fetchPage(ctx context.Context, startIndex int) ([]Finding, 
 		return nil, 0, fmt.Errorf("nvd create request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "VulnWatch/1.0")
 	if f.apiKey != "" {
 		req.Header.Set("apiKey", f.apiKey) // NVD API key header (never logged)
 	}
+	slog.Info("nvd requesting", "url", req.URL.String())
 
 	resp, err := f.client.Do(req)
 	if err != nil {
@@ -143,16 +155,18 @@ func (f *NVDFetcher) toFinding(cve nvdCVE) (Finding, bool) {
 	}
 
 	published := parseNVDTime(cve.Published)
+	affectedVer, fixedVer := extractNVDVersions(cve.Configurations)
 
 	return Finding{
-		Source:      f.name,
-		Technology:  f.technology,
-		CVEID:       cve.ID,
-		Severity:    sev,
-		Description: desc,
-		URL:         url,
-		Published:   published,
-		// FixedVersion: NVD doesn't provide structured fix versions; left empty per §3.13
+		Source:          f.name,
+		Technology:      f.technology,
+		CVEID:           cve.ID,
+		Severity:        sev,
+		Description:     desc,
+		URL:             url,
+		Published:       published,
+		AffectedVersion: affectedVer,
+		FixedVersion:    fixedVer,
 	}, true
 }
 
@@ -176,6 +190,28 @@ func (f *NVDFetcher) extractSeverity(cve nvdCVE) Severity {
 		return parser.NormalizeCVSSScore(cve.Metrics.CVSSMetricV2[0].CVSSData.BaseScore)
 	}
 	return SeverityUnknown
+}
+
+func extractNVDVersions(configs []nvdConfig) (affected, fixed string) {
+	for _, conf := range configs {
+		for _, node := range conf.Nodes {
+			for _, match := range node.CpeMatch {
+				if match.Vulnerable {
+					if match.VersionEndExcluding != "" {
+						fixed = match.VersionEndExcluding
+					}
+					if match.VersionStartIncluding != "" {
+						affected = ">=" + match.VersionStartIncluding
+					}
+					// If we have a fix but no start, just assume "up to fix"
+					if affected != "" || fixed != "" {
+						return affected, fixed
+					}
+				}
+			}
+		}
+	}
+	return "", ""
 }
 
 func parseNVDTime(s string) time.Time {
@@ -207,12 +243,13 @@ type nvdVulnWrapper struct {
 }
 
 type nvdCVE struct {
-	ID           string       `json:"id"`
-	Descriptions []nvdDesc    `json:"descriptions"`
-	Metrics      nvdMetrics   `json:"metrics"`
-	References   []nvdRef     `json:"references"`
-	Published    string       `json:"published"`
-	LastModified string       `json:"lastModified"`
+	ID             string       `json:"id"`
+	Descriptions   []nvdDesc    `json:"descriptions"`
+	Metrics        nvdMetrics   `json:"metrics"`
+	References     []nvdRef     `json:"references"`
+	Configurations []nvdConfig  `json:"configurations"`
+	Published      string       `json:"published"`
+	LastModified   string       `json:"lastModified"`
 }
 
 type nvdDesc struct {
@@ -244,4 +281,19 @@ type nvdRef struct {
 	URL    string   `json:"url"`
 	Source string   `json:"source"`
 	Tags   []string `json:"tags"`
+}
+
+type nvdConfig struct {
+	Nodes []nvdNode `json:"nodes"`
+}
+
+type nvdNode struct {
+	CpeMatch []nvdCpeMatch `json:"cpeMatch"`
+}
+
+type nvdCpeMatch struct {
+	Vulnerable            bool   `json:"vulnerable"`
+	Criteria              string `json:"criteria"`
+	VersionStartIncluding string `json:"versionStartIncluding"`
+	VersionEndExcluding   string `json:"versionEndExcluding"`
 }

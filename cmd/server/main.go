@@ -164,6 +164,8 @@ func buildFetchers(cfg *config.AppConfig) []fetchers.Fetcher {
 			f = fetchers.NewNodeJSRSSFetcher(src.Name, src.Technology, src.URL)
 		case "vendor_rss":
 			f = fetchers.NewVendorRSSFetcher(src.Name, src.Technology, src.URL, src.Format)
+		case "osv_gomod":
+			f = fetchers.NewOSVGoModFetcher(src.Name, src.Path)
 		default:
 			slog.Warn("unknown source type — skipping", "name", src.Name, "type", src.Type)
 			continue

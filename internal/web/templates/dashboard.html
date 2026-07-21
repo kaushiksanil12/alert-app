@@ -389,6 +389,7 @@
             <th>Technology</th>
             <th>Severity</th>
             <th>Description</th>
+            <th>Affected</th>
             <th>Fixed In</th>
             <th>Published</th>
             <th>First Seen</th>
@@ -408,6 +409,7 @@
             <td><span class="tech-tag">{{.Technology}}</span></td>
             <td><span class="badge {{severityClass .Severity}}">{{.Severity}}</span></td>
             <td class="desc-cell"><div class="truncate">{{.Description}}</div></td>
+            <td>{{if .AffectedVersion}}<span class="fix-version">{{.AffectedVersion}}</span>{{else}}<span style="color:var(--text-3)">—</span>{{end}}</td>
             <td>{{if .FixedVersion}}<span class="fix-version">{{.FixedVersion}}</span>{{else}}<span style="color:var(--text-3)">—</span>{{end}}</td>
             <td class="date-cell">{{formatDateOnly .Published}}</td>
             <td class="date-cell">{{formatTime .FirstSeen}}</td>

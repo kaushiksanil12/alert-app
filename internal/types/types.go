@@ -37,8 +37,9 @@ type Finding struct {
 	Severity     Severity
 	Description  string    // sanitized — no raw HTML
 	URL          string
-	Published    time.Time
-	FixedVersion string    // best-effort; empty if not available from source (§3.13)
+	Published       time.Time
+	AffectedVersion string    // version(s) in which vulnerability was detected
+	FixedVersion    string    // best-effort; empty if not available from source (§3.13)
 }
 
 // StoredFinding wraps a Finding with state tracked only in the local store.

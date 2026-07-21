@@ -103,6 +103,7 @@ func (f *OSVFetcher) toFinding(v osvVuln) (Finding, bool) {
 	sev := f.extractSeverity(v)
 	published := parseOSVTime(v.Published)
 	fixedVer := extractFixedVersion(v.Affected)
+	affectedVer := extractAffectedVersion(v.Affected)
 
 	desc := parser.Sanitize(v.Summary)
 	if desc == "" {
@@ -121,14 +122,15 @@ func (f *OSVFetcher) toFinding(v osvVuln) (Finding, bool) {
 	}
 
 	return Finding{
-		Source:       f.name,
-		Technology:   f.technology,
-		CVEID:        cveID,
-		Severity:     sev,
-		Description:  desc,
-		URL:          url,
-		Published:    published,
-		FixedVersion: fixedVer,
+		Source:          f.name,
+		Technology:      f.technology,
+		CVEID:           cveID,
+		Severity:        sev,
+		Description:     desc,
+		URL:             url,
+		Published:       published,
+		AffectedVersion: affectedVer,
+		FixedVersion:    fixedVer,
 	}, true
 }
 
@@ -170,6 +172,23 @@ func extractFixedVersion(affected []osvAffected) string {
 					return e.Fixed
 				}
 			}
+		}
+	}
+	return ""
+}
+
+// extractAffectedVersion finds the earliest introduced version from the affected ranges.
+func extractAffectedVersion(affected []osvAffected) string {
+	for _, a := range affected {
+		for _, r := range a.Ranges {
+			for _, e := range r.Events {
+				if e.Introduced != "" && e.Introduced != "0" {
+					return ">=" + e.Introduced
+				}
+			}
+		}
+		if len(a.Versions) > 0 {
+			return a.Versions[0]
 		}
 	}
 	return ""
@@ -220,7 +239,8 @@ type osvSeverity struct {
 }
 
 type osvAffected struct {
-	Ranges []osvRange `json:"ranges"`
+	Ranges   []osvRange `json:"ranges"`
+	Versions []string   `json:"versions"`
 }
 
 type osvRange struct {

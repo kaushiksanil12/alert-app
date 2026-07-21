@@ -16,6 +16,7 @@ services:
     # Single writable volume for the bbolt data file.
     volumes:
       - vuln-data:/data
+      - ./:/workspace:ro
 
     ports:
       - "18080:8080"

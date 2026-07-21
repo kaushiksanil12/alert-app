@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"sort"
 	"time"
 
 	"go.etcd.io/bbolt"
@@ -189,6 +190,12 @@ func (s *Store) GetFindings(f FindingFilter) ([]fetchers.StoredFinding, error) {
 			return nil
 		})
 	})
+
+	// Sort findings by Published date, descending (newest first)
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Published.After(results[j].Published)
+	})
+
 	return results, err
 }
 

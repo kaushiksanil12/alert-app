@@ -19,7 +19,6 @@ Required variables:
 |---|---|
 | `TEAMS_WEBHOOK_URL` | Microsoft Teams incoming webhook URL |
 | `NVD_API_KEY` | NIST NVD API key (see below) |
-| `RUN_NOW_TOKEN` | Secret token for the "Run Now" API endpoint |
 
 ### 2. Run with Docker Compose
 
@@ -30,7 +29,7 @@ docker compose up -d
 ### 3. Open the dashboard
 
 ```
-http://localhost:8080
+http://localhost:18080
 ```
 
 ---
@@ -54,7 +53,6 @@ With a key, the limit increases to 50 requests per 10 seconds — more than suff
 |---|---|---|
 | `TEAMS_WEBHOOK_URL` | *(required)* | Teams incoming webhook for main daily alerts |
 | `NVD_API_KEY` | *(required for production)* | NIST NVD API key |
-| `RUN_NOW_TOKEN` | *(required)* | Bearer token for `/api/run-now` and acknowledge endpoints |
 | `TZ` | `Asia/Kolkata` | Timezone for local-midnight scheduling |
 | `DATA_DIR` | `/data` | Directory for the bbolt data file (must be writable) |
 | `SOURCES_PATH` | `config/sources.yaml` | Path to the sources config file |
@@ -102,37 +100,37 @@ Configured in [`config/sources.yaml`](config/sources.yaml) — add or remove tec
 | `/` | GET | None | Dashboard |
 | `/healthz` | GET | None | Health check + last run timestamp |
 | `/api/export.csv` | GET | None | CSV export of all current findings |
-| `/api/run-now` | POST | Bearer token | Trigger an immediate scan |
-| `/api/acknowledge/{source}/{cve_id}` | POST | Bearer token | Acknowledge a finding |
-| `/api/unacknowledge/{source}/{cve_id}` | POST | Bearer token | Reverse an acknowledgement |
+| `/api/run-now` | POST | None | Trigger an immediate scan |
+| `/api/acknowledge/{source}/{cve_id}` | POST | None | Acknowledge a finding |
+| `/api/unacknowledge/{source}/{cve_id}` | POST | None | Reverse an acknowledgement |
 
 ### Example: Trigger Run Now
 
 ```bash
-curl -X POST http://localhost:8080/api/run-now \
-  -H "Authorization: Bearer your-run-now-token"
+curl -X POST http://localhost:18080/api/run-now
 ```
 
 ### Example: Acknowledge a Finding
 
 ```bash
-curl -X POST http://localhost:8080/api/acknowledge/django/CVE-2023-41164 \
-  -H "Authorization: Bearer your-run-now-token"
+curl -X POST http://localhost:18080/api/acknowledge/django/CVE-2023-41164
 ```
 
 ### Example: Export CSV with filters
 
 ```bash
-curl "http://localhost:8080/api/export.csv?severity=HIGH&from=2024-01-01"
+curl "http://localhost:18080/api/export.csv?severity=HIGH&from=2024-01-01"
 ```
 
 ---
 
-## First-Run Baseline Behavior
+## Fetch Limits & Baselines
 
-On the **very first run** for any source, the service silently records all currently-published CVEs as "already seen" — **no alerts are sent**. This prevents a flood of historical CVEs the first time a source is added.
+To ensure ultra-fast scan times and prevent dashboard flooding, the service explicitly limits data fetching to the **latest 20 vulnerabilities per source**. 
 
-Alerts only fire for CVEs published **after** the baseline run.
+On the **very first run** for any source, the service silently records these vulnerabilities as "already seen" (the baseline) — **no alerts are sent**. 
+
+Alerts only fire for new CVEs published **after** this baseline run.
 
 ---
 
@@ -223,7 +221,6 @@ Restart the container to pick up changes.
 # Required
 TEAMS_WEBHOOK_URL=https://outlook.office.com/webhook/...
 NVD_API_KEY=your-nvd-api-key-here
-RUN_NOW_TOKEN=a-strong-random-secret-here
 
 # Recommended
 TZ=Asia/Kolkata

@@ -13,21 +13,16 @@ import (
 // SourceConfig defines how to fetch vulnerabilities for one tracked technology.
 // All source-specific fields (ecosystem, keyword, url) are optional depending on type.
 type SourceConfig struct {
-	Name        string `yaml:"name"`       // unique ID, used as store key prefix
-	Technology  string `yaml:"technology"` // display name for alerts and dashboard
-	Type        string `yaml:"type"`       // osv | nvd | nodejs_rss | vendor_rss
-
-	// OSV.dev fields (type: osv)
-	Ecosystem string `yaml:"ecosystem,omitempty"`
-	Package   string `yaml:"package,omitempty"`
-
-	// NVD fields (type: nvd)
-	Keyword     string `yaml:"keyword,omitempty"`
-	MinSeverity string `yaml:"min_severity,omitempty"` // overrides global MIN_ALERT_SEVERITY for this source
-
-	// RSS / Vendor fields (type: nodejs_rss | vendor_rss)
-	URL    string `yaml:"url,omitempty"`
-	Format string `yaml:"format,omitempty"` // rss | json
+	Name        string `yaml:"name"`                   // unique ID, used as store key prefix
+	Technology  string `yaml:"technology"`             // display name for alerts and dashboard
+	Type        string `yaml:"type"`                   // osv | nvd | vendor_rss | osv_gomod
+	Keyword     string `yaml:"keyword,omitempty"`      // For NVD searches
+	Ecosystem   string `yaml:"ecosystem,omitempty"`    // For OSV searches
+	Package     string `yaml:"package,omitempty"`      // For OSV searches
+	URL         string `yaml:"url,omitempty"`          // For Vendor RSS
+	Path        string `yaml:"path,omitempty"`         // For local file scans (like go.mod)
+	Format      string `yaml:"format,omitempty"`       // For Vendor RSS
+	MinSeverity string `yaml:"min_severity,omitempty"` // Filter out LOW/MEDIUM
 }
 
 // SourcesFile is the top-level structure of sources.yaml.

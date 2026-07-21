@@ -65,9 +65,9 @@ sources:
   # ─── React ─────────────────────────────────────────────────────────────────
   - name: react
     technology: "React"
-    type: osv
-    ecosystem: npm
-    package: react
+    type: nvd
+    keyword: "react"
+    min_severity: HIGH
 
   # ─── Python / CPython Runtime ──────────────────────────────────────────────
   - name: python_cpython
@@ -124,3 +124,8 @@ sources:
     type: osv
     ecosystem: Maven
     package: org.springframework.boot:spring-boot
+  # ─── Alert App Internal (Self-Scan) ────────────────────────────────────────
+  - name: alert_app_gomod
+    technology: "Alert App (Go)"
+    type: osv_gomod
+    path: "/workspace/go.mod"

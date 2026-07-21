@@ -65,7 +65,7 @@ func (h *ExportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	cw := csv.NewWriter(w)
 	// Header row (§3.14 required columns)
-	header := []string{"technology", "cve_id", "severity", "published", "fixed_version", "acknowledged", "source", "url"}
+	header := []string{"technology", "cve_id", "severity", "published", "affected_version", "fixed_version", "acknowledged", "source", "url"}
 	if err := cw.Write(header); err != nil {
 		slog.Error("export: write header", "err", err)
 		return
@@ -85,6 +85,7 @@ func (h *ExportHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			sf.CVEID,
 			string(sf.Severity),
 			published,
+			sf.AffectedVersion,
 			sf.FixedVersion,
 			ackStr,
 			sf.Source,
