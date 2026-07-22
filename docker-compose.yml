@@ -27,6 +27,7 @@ services:
       - NVD_API_KEY=${NVD_API_KEY}
 
       # ── Optional — uncomment to override defaults ─────
+      - BASE_URL=${BASE_URL:-http://localhost:18080}
       - TZ=${TZ:-Asia/Kolkata}
       - DATA_DIR=/data
       - SOURCES_PATH=/config/sources.yaml
@@ -42,6 +43,12 @@ services:
 
       # ── Optional tokens ───────────────────────────────
       # - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+      # ── Authentication (Microsoft Entra ID) ────────────
+      - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
+      - ENTRA_CLIENT_SECRET=${ENTRA_CLIENT_SECRET}
+      - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
+      - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL}
 
     # Writable /tmp for any Go standard library needs.
     tmpfs:

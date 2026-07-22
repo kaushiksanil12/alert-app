@@ -17,35 +17,40 @@ import (
 type Scheduler struct {
 	cfg            *config.AppConfig
 	store          *store.Store
+	tasks          *store.TaskStore
 	fetcherList    []fetchers.Fetcher
 	mainClient     *alert.TeamsClient
 	critClient     *alert.TeamsClient // nil if CRITICAL_WEBHOOK_URL not set
 	digestClient   *alert.TeamsClient
+	overdueAlerter *alert.OverdueAlerter
 	filter         *alert.SeverityFilter
 	manualTrigger  chan struct{}
 	mu             sync.Mutex // protects isRunning
 	isRunning      bool
 }
 
-// New creates a Scheduler. All external dependencies are injected.
 func New(
 	cfg *config.AppConfig,
 	st *store.Store,
+	tasks *store.TaskStore,
 	fl []fetchers.Fetcher,
 	mainClient *alert.TeamsClient,
 	critClient *alert.TeamsClient,
 	digestClient *alert.TeamsClient,
+	overdueAlerter *alert.OverdueAlerter,
 	filter *alert.SeverityFilter,
 ) *Scheduler {
 	return &Scheduler{
-		cfg:           cfg,
-		store:         st,
-		fetcherList:   fl,
-		mainClient:    mainClient,
-		critClient:    critClient,
-		digestClient:  digestClient,
-		filter:        filter,
-		manualTrigger: make(chan struct{}, 1),
+		cfg:            cfg,
+		store:          st,
+		tasks:          tasks,
+		fetcherList:    fl,
+		mainClient:     mainClient,
+		critClient:     critClient,
+		digestClient:   digestClient,
+		overdueAlerter: overdueAlerter,
+		filter:         filter,
+		manualTrigger:  make(chan struct{}, 1),
 	}
 }
 
@@ -89,6 +94,9 @@ func (s *Scheduler) Run(ctx context.Context) {
 			if today == s.cfg.WeeklyDigestDay {
 				s.runWeeklyDigest(ctx)
 			}
+
+			// Run overdue check daily
+			s.runOverdueCheck(ctx)
 		}
 	}
 }
@@ -264,6 +272,22 @@ func (s *Scheduler) runWeeklyDigest(ctx context.Context) {
 	sender := alert.NewDigestSender(s.digestClient)
 	if err := sender.Send(digestCtx, findings, since); err != nil {
 		slog.Error("weekly digest send failed", "err", err)
+	}
+}
+
+// runOverdueCheck fetches overdue tasks and sends an alert.
+func (s *Scheduler) runOverdueCheck(ctx context.Context) {
+	slog.Info("overdue check starting")
+	overdue, err := s.tasks.OverdueTasks(time.Now())
+	if err != nil {
+		slog.Error("failed to get overdue tasks", "err", err)
+		return
+	}
+	if len(overdue) == 0 {
+		return
+	}
+	if err := s.overdueAlerter.AlertOverdue(overdue); err != nil {
+		slog.Error("failed to send overdue alert", "err", err)
 	}
 }
 

@@ -39,8 +39,13 @@ type AppConfig struct {
 	GitHubToken            string
 	CriticalWebhookURL     string
 	WeeklyDigestWebhookURL string
+	EntraClientSecret      string
 
 	// Non-secret config
+	EntraClientID          string
+	EntraTenantID          string
+	BootstrapAdminEmail    string
+	BaseURL                string
 	TZ                    string
 	DataDir               string
 	Port                  string
@@ -63,6 +68,12 @@ func Load(sourcesPath string) (*AppConfig, error) {
 		GitHubToken:            os.Getenv("GITHUB_TOKEN"),
 		CriticalWebhookURL:     os.Getenv("CRITICAL_WEBHOOK_URL"),
 		WeeklyDigestWebhookURL: os.Getenv("WEEKLY_DIGEST_WEBHOOK_URL"),
+		EntraClientSecret:      os.Getenv("ENTRA_CLIENT_SECRET"),
+
+		EntraClientID:       envOr("ENTRA_CLIENT_ID", ""),
+		EntraTenantID:       envOr("ENTRA_TENANT_ID", "common"),
+		BootstrapAdminEmail: os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
+		BaseURL:             envOr("BASE_URL", "http://localhost:8080"),
 
 		TZ:               envOr("TZ", "Asia/Kolkata"),
 		DataDir:          envOr("DATA_DIR", "/data"),
@@ -113,6 +124,7 @@ func (c *AppConfig) RedactedSecrets() map[string]string {
 		"GITHUB_TOKEN":              redact(c.GitHubToken),
 		"CRITICAL_WEBHOOK_URL":      redact(c.CriticalWebhookURL),
 		"WEEKLY_DIGEST_WEBHOOK_URL": redact(c.WeeklyDigestWebhookURL),
+		"ENTRA_CLIENT_SECRET":       redact(c.EntraClientSecret),
 	}
 }
 
