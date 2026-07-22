@@ -402,7 +402,7 @@ const tasksHTML = `<!DOCTYPE html>
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
             <option value="wont_fix">Won't Fix</option>
-            <option value="ignored">Ignored</option>
+            <option value="ignored">Ignore</option>
           </select>
         </div>
       </td>

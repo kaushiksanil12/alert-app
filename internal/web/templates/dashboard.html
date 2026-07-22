@@ -1,5 +1,10 @@
+<!-- 
+  ==========================================
+  Designed & Developed by Kaushik
+  ==========================================
+-->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +22,9 @@
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
     }
+    
+    // Developer Signature
+    console.info("%cBuilt by Kaushik \uD83D\uDE80", "color: #0066FF; font-weight: bold; font-size: 14px;");
   </script>
   <style>
     :root {
@@ -208,10 +216,10 @@
 
 <main class="main">
   <div class="stats-grid">
-    <div class="stat-card stat-new"><div class="stat-label">Total Findings</div><div class="stat-value" id="totalCount">{{.TotalFindings}}</div><div class="stat-sub">in current view</div></div>
-    <div class="stat-card stat-new"><div class="stat-label">New (Last 24h)</div><div class="stat-value">{{.NewToday}}</div><div class="stat-sub">requiring attention</div></div>
+    <div class="stat-card stat-new"><div class="stat-label">This Week</div><div class="stat-value">{{.ThisWeek}}</div><div class="stat-sub">past 7 days</div></div>
+    <div class="stat-card"><div class="stat-label">Previous Week</div><div class="stat-value" style="color:var(--text-2)">{{.PreviousWeek}}</div><div class="stat-sub">7–14 days ago</div></div>
+    <div class="stat-card"><div class="stat-label">Older Findings</div><div class="stat-value" style="color:var(--text-3)">{{.OlderFindings}}</div><div class="stat-sub">14+ days ago</div></div>
     <div class="stat-card stat-critical"><div class="stat-label">Sources Monitored</div><div class="stat-value" style="color:var(--accent)">{{len .Sources}}</div><div class="stat-sub">technologies tracked</div></div>
-    <div class="stat-card"><div class="stat-label">Last Scan</div><div class="stat-value" style="font-size:1rem;padding-top:.5rem">{{.LastRun}}</div><div class="stat-sub">scheduled daily midnight</div></div>
   </div>
 
   <section class="section">

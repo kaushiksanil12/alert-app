@@ -82,7 +82,7 @@ func Load(sourcesPath string) (*AppConfig, error) {
 		WeeklyDigestDay:  envOr("WEEKLY_DIGEST_DAY", "Monday"),
 
 		FailureAlertThreshold: envInt("FAILURE_ALERT_THRESHOLD", 3),
-		RetentionDays:         envInt("RETENTION_DAYS", 30),
+		RetentionDays:         envInt("RETENTION_DAYS", 90),
 		LogRetentionDays:      envInt("LOG_RETENTION_DAYS", 30),
 	}
 

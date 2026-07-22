@@ -196,10 +196,16 @@ func main() {
 	// Mount auth routes onto main mux
 	mux.Handle("/", handler)
 
+	// Add Developer Signature Header
+	signedMux := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Developed-By", "Kaushik")
+		mux.ServeHTTP(w, r)
+	})
+
 	// ── Start HTTP server ─────────────────────────────────────────────────────
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%s", cfg.Port),
-		Handler:      mux,
+		Handler:      signedMux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,

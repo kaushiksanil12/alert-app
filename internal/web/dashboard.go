@@ -59,8 +59,9 @@ type dashboardData struct {
 	CSRFToken       string
 	SeverityFilter  string
 	SourceFilter    string
-	TotalFindings   int
-	NewToday        int
+	ThisWeek        int
+	PreviousWeek    int
+	OlderFindings   int
 }
 
 type findingRow struct {
@@ -146,11 +147,18 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sources = append(sources, row)
 	}
 
-	newToday := 0
-	since24h := time.Now().Add(-24 * time.Hour)
+	now := time.Now()
+	thisWeekBoundary := now.AddDate(0, 0, -7)
+	prevWeekBoundary := now.AddDate(0, 0, -14)
+
+	var thisWeek, prevWeek, older int
 	for _, f := range rawFindings {
-		if f.FirstSeen.After(since24h) {
-			newToday++
+		if f.FirstSeen.After(thisWeekBoundary) {
+			thisWeek++
+		} else if f.FirstSeen.After(prevWeekBoundary) {
+			prevWeek++
+		} else {
+			older++
 		}
 	}
 
@@ -169,16 +177,17 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := dashboardData{
-		LastRun:         lastRunStr,
-		Sources:         sources,
-		Findings:        findings,
-		Session:         sess,
-		CSRFToken:       auth.CSRFToken(r),
-		SeverityFilter:  severityFilter,
-		SourceFilter:    sourceFilter,
-		TotalFindings:   len(rawFindings),
-		NewToday:        newToday,
-		Users:           users,
+		LastRun:        lastRunStr,
+		Sources:        sources,
+		Findings:       findings,
+		Session:        sess,
+		CSRFToken:      auth.CSRFToken(r),
+		SeverityFilter: severityFilter,
+		SourceFilter:   sourceFilter,
+		ThisWeek:       thisWeek,
+		PreviousWeek:   prevWeek,
+		OlderFindings:  older,
+		Users:          users,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
