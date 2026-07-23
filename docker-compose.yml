@@ -2,7 +2,7 @@ services:
   vuln-alert:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: app/Dockerfile
     container_name: vuln-alert-service
     restart: unless-stopped
 

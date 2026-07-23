@@ -255,10 +255,11 @@ func (h *TasksHandler) MyTasksHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	data := map[string]any{
-		"Tasks":     tasks,
-		"Users":     users,
-		"Session":   sess,
-		"CSRFToken": auth.CSRFToken(r),
+		"Tasks":        tasks,
+		"Users":        users,
+		"Session":      sess,
+		"CSRFToken":    auth.CSRFToken(r),
+		"FilterStatus": r.URL.Query().Get("status"),
 	}
 	if err := h.tasksTmpl.Execute(w, data); err != nil {
 		slog.Error("render tasks template", "err", err)
@@ -369,11 +370,11 @@ const tasksHTML = `<!DOCTYPE html>
 
   <div class="filters">
     <select onchange="window.location.search='?status='+this.value">
-      <option value="">All Statuses</option>
-      <option value="open">Open</option>
-      <option value="in_progress">In Progress</option>
-      <option value="resolved">Resolved</option>
-      <option value="wont_fix">Won't Fix</option>
+      <option value="" {{if eq .FilterStatus ""}}selected{{end}}>All Statuses</option>
+      <option value="open" {{if eq .FilterStatus "open"}}selected{{end}}>Open</option>
+      <option value="in_progress" {{if eq .FilterStatus "in_progress"}}selected{{end}}>In Progress</option>
+      <option value="resolved" {{if eq .FilterStatus "resolved"}}selected{{end}}>Resolved</option>
+      <option value="ignored" {{if eq .FilterStatus "ignored"}}selected{{end}}>Ignored</option>
     </select>
   </div>
 
