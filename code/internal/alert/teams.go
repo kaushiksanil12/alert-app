@@ -90,8 +90,13 @@ func (t *TeamsClient) buildMessageCard(findings []fetchers.Finding) teamsMessage
 			// Cap at 20 sections to avoid oversized payloads.
 			break
 		}
+		title := fmt.Sprintf("**%s** — %s (Source: %s)", f.CVEID, f.Technology, f.Source)
+		if f.URL != "" {
+			title = fmt.Sprintf("**[%s](%s)** — %s (Source: %s)", f.CVEID, f.URL, f.Technology, f.Source)
+		}
+
 		section := teamsSection{
-			ActivityTitle:    fmt.Sprintf("**%s** — %s", f.CVEID, f.Technology),
+			ActivityTitle:    title,
 			ActivitySubtitle: fmt.Sprintf("Severity: **%s** | Published: %s", f.Severity, formatDate(f.Published)),
 			Facts:            buildFacts(f),
 			Markdown:         true,

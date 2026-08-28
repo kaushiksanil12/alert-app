@@ -63,6 +63,9 @@ func (s *Store) initBuckets() error {
 // Close shuts down the database cleanly.
 func (s *Store) Close() error { return s.db.Close() }
 
+// DB returns the underlying bbolt.DB instance.
+func (s *Store) DB() *bbolt.DB { return s.db }
+
 // ─── Baseline ────────────────────────────────────────────────────────────────
 
 // IsBaselineDone reports whether the first-run baseline has been recorded for source.

@@ -1,15 +1,20 @@
 # ─── Stage 1: Build ─────────────────────────────────────────────────────────
 # Use the official Go builder image. All build tools stay in this stage only.
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
+# Copy config
+COPY config/ /build/config
+
+WORKDIR /build/code
+
 # Download dependencies first (layer-cached unless go.mod/go.sum changes).
-COPY go.mod go.sum ./
+COPY code/go.mod code/go.sum ./
 RUN go mod download && go mod verify
 
 # Copy source.
-COPY . .
+COPY code/ .
 
 # Compile: CGO disabled (required for distroless/static), stripped binary for size.
 # -ldflags="-s -w" removes symbol table and DWARF debug info.
