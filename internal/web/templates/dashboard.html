@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VulnWatch — Security Vulnerability Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <script>
+    if (localStorage.getItem('theme') === 'light' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+    function toggleTheme() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const next = isLight ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    }
+    console.info("%cBuilt by Kaushik ", "color: #0066FF; font-weight: bold; font-size: 14px;");
+  </script>
+  <style>
+    :root {
+      --bg-base: #050505;
+      --bg-card: #0d0d0d;
+      --bg-card2: #121212;
+      --bg-hover: #1a1a1a;
+      --border: #222222;
+      --border-lit: #333333;
+      --text-1: #ffffff;
+      --text-2: #a3a3a3;
+      --text-3: #737373;
+      --accent: #0066FF;
+      --accent-hover: #1a75ff;
+
+      --crit: #ff3366;
+      --crit-bg: rgba(255, 51, 102, 0.1);
+      --high: #ff6b00;
+      --high-bg: rgba(255, 107, 0, 0.1);
+      --med: #f59e0b;
+      --med-bg: rgba(245, 158, 11, 0.1);
+      --low: #00e676;
+      --low-bg: rgba(0, 230, 118, 0.1);
+      --unk: #737373;
+      --unk-bg: rgba(115, 115, 115, 0.1);
+    }
+
+    :root[data-theme="light"] {
+      --bg-base: #f8f9fa;
+      --bg-card: #ffffff;
+      --bg-card2: #f1f3f5;
+      --bg-hover: #e9ecef;
+      --border: #e5e5e5;
+      --border-lit: #d4d4d4;
+      --text-1: #171717;
+      --text-2: #525252;
+      --text-3: #737373;
+      --accent: #0066FF;
+      --accent-hover: #005ce6;
+      --crit: #e11d48;
+      --crit-bg: rgba(225, 29, 72, 0.1);
+      --high: #ea580c;
+      --high-bg: rgba(234, 88, 12, 0.1);
+      --med: #d97706;
+      --med-bg: rgba(217, 119, 6, 0.1);
+      --low: #059669;
+      --low-bg: rgba(5, 150, 105, 0.1);
+      --unk: #525252;
+      --unk-bg: rgba(82, 82, 82, 0.1);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-1);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ───────────────────────────────────────── */
+    .header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 1rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .85rem;
+      color: #fff;
+    }
+
+    .nav {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-left: 2rem;
+    }
+
+    .nav a {
+      color: var(--text-2);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color .2s;
+    }
+
+    .nav a:hover {
+      color: var(--text-1);
+    }
+
+    .nav a.active {
+      color: var(--accent);
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-meta {
+      font-size: .8rem;
+      color: var(--text-2);
+      font-weight: 300;
+    }
+
+    .header-meta strong {
+      color: var(--text-1);
+      font-weight: 500;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .45rem 1rem;
+      border-radius: 4px;
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
+      text-decoration: none;
+      font-family: inherit;
+      letter-spacing: 0.02em;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-lit);
+      color: var(--text-1);
+      background: var(--bg-hover);
+    }
+
+    .btn-sm {
+      padding: .3rem .7rem;
+      font-size: .78rem;
+    }
+
+    /* ── Layout ───────────────────────────────────────── */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* ── Stat cards ───────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1.5rem;
+      transition: border-color .2s, transform .2s, box-shadow .2s;
+    }
+
+    .stat-card:hover {
+      border-color: var(--border-lit);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .stat-label {
+      font-size: .75rem;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: .5rem;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-sub {
+      font-size: .78rem;
+      color: var(--text-3);
+      margin-top: .5rem;
+      font-weight: 300;
+    }
+
+    .stat-critical .stat-value {
+      color: var(--crit);
+    }
+
+    .stat-high .stat-value {
+      color: var(--high);
+    }
+
+    .stat-new .stat-value {
+      color: var(--text-1);
+    }
+
+    /* ── Section heading ──────────────────────────────── */
+    .section {
+      margin-bottom: 2rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      gap: 1rem;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-1);
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      letter-spacing: -0.01em;
+    }
+
+    .section-title::before {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 16px;
+      background: var(--accent);
+    }
+
+    /* ── Source status grid ───────────────────────────── */
+    .sources-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: .75rem;
+    }
+
+    .source-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: .85rem;
+      transition: all .2s;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .source-card:hover {
+      background: var(--bg-card2);
+      border-color: var(--border-lit);
+      transform: translateY(-2px);
+    }
+
+    .source-card.active-source {
+      border-color: var(--accent);
+      background: var(--bg-card2);
+    }
+
+    .source-card.ok {
+      border-left: 2px solid var(--low);
+    }
+
+    .source-card.err {
+      border-left: 2px solid var(--crit);
+    }
+
+    .source-card.unknown {
+      border-left: 2px solid var(--text-3);
+    }
+
+    .source-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    .dot-ok {
+      background: var(--low);
+    }
+
+    .dot-err {
+      background: var(--crit);
+    }
+
+    .dot-unk {
+      background: var(--text-3);
+    }
+
+    .source-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .source-name {
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--text-1);
+      margin-bottom: .2rem;
+    }
+
+    .source-meta {
+      font-size: .75rem;
+      color: var(--text-3);
+      font-weight: 300;
+    }
+
+    .findings-badge {
+      display: inline-block;
+      background: var(--bg-hover);
+      border-radius: 2px;
+      padding: .05rem .35rem;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    /* ── Filters bar ──────────────────────────────────── */
+    .filters-bar {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      flex-wrap: wrap;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: .75rem 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .filter-label {
+      font-size: .8rem;
+      color: var(--text-2);
+    }
+
+    .filter-select {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      border-radius: 4px;
+      padding: .35rem .7rem;
+      font-size: .8rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      border-radius: 4px;
+      padding: .35rem .9rem;
+      font-size: .8rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .toggle-btn.active {
+      background: rgba(0, 102, 255, .1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── Findings table ───────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+    }
+
+    thead {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      padding: 1rem 1.25rem;
+      text-align: left;
+      font-size: .7rem;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+
+    tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: var(--bg-card2);
+    }
+
+    td {
+      padding: 1rem 1.25rem;
+      color: var(--text-2);
+      vertical-align: top;
+    }
+
+    td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .8rem;
+      color: var(--text-1);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .2rem .5rem;
+      border-radius: 2px;
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .sev-critical {
+      background: var(--crit-bg);
+      color: var(--crit);
+      border: 1px solid rgba(255, 51, 102, 0.2);
+    }
+
+    .sev-high {
+      background: var(--high-bg);
+      color: var(--high);
+      border: 1px solid rgba(255, 107, 0, 0.2);
+    }
+
+    .sev-medium {
+      background: var(--med-bg);
+      color: var(--med);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .sev-low {
+      background: var(--low-bg);
+      color: var(--low);
+      border: 1px solid rgba(0, 230, 118, 0.2);
+    }
+
+    .sev-unknown {
+      background: var(--unk-bg);
+      color: var(--unk);
+      border: 1px solid rgba(115, 115, 115, 0.2);
+    }
+
+    .cve-link {
+      color: var(--text-1);
+      text-decoration: none;
+      border-bottom: 1px dashed var(--border-lit);
+    }
+
+    .cve-link:hover {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tech-tag {
+      display: inline-block;
+      background: var(--bg-hover);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: .15rem .5rem;
+      font-size: .75rem;
+      color: var(--text-2);
+    }
+
+    .desc-cell {
+      max-width: 380px;
+      color: var(--text-2);
+      font-size: .85rem;
+      line-height: 1.5;
+    }
+
+    .desc-cell .truncate {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .fix-version {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: .75rem;
+      color: var(--low);
+    }
+
+    .date-cell {
+      color: var(--text-3);
+      font-size: .75rem;
+      white-space: nowrap;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Task badges */
+    .task-badge {
+      display: inline-flex;
+      padding: .2rem .4rem;
+      border-radius: 4px;
+      font-size: .7rem;
+      background: var(--bg-hover);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+
+    .task-open {
+      background: rgba(6, 182, 212, .1);
+      color: #22d3ee;
+      border-color: rgba(6, 182, 212, .3);
+    }
+
+    .task-in_progress {
+      background: rgba(139, 92, 246, .1);
+      color: #a78bfa;
+      border-color: rgba(139, 92, 246, .3);
+    }
+
+    .task-resolved {
+      background: rgba(34, 197, 94, .1);
+      color: #4ade80;
+      border-color: rgba(34, 197, 94, .3);
+    }
+
+    .task-ignored {
+      background: rgba(163, 163, 163, .1);
+      color: #a3a3a3;
+      border-color: rgba(163, 163, 163, .3);
+    }
+
+    .empty-state {
+      padding: 5rem 2rem;
+      text-align: center;
+      color: var(--text-3);
+      font-size: .95rem;
+    }
+
+    .empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      opacity: .3;
+    }
+
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: .75rem;
+    }
+
+    .toast {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1rem 1.25rem;
+      font-size: .85rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+      min-width: 280px;
+      animation: slideUp .3s ease;
+    }
+
+    .toast.success {
+      border-left: 2px solid var(--low);
+    }
+
+    .toast.error {
+      border-left: 2px solid var(--crit);
+    }
+
+    .toast.info {
+      border-left: 2px solid var(--accent);
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes spin {
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Assignment Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal {
+      background: #121212;
+      border: 1px solid #222;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+    }
+
+    .modal h3 {
+      margin-bottom: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .modal label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-2);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .modal select,
+    .modal input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 6px;
+      margin-bottom: 1.25rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      color-scheme: dark;
+    }
+
+    .modal select:focus,
+    .modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg></div>
+        <span>VulnWatch</span>
+      </div>
+      <nav class="nav">
+        <a href="/" class="active">Dashboard</a>
+        <a href="/tasks">My Tasks</a>
+        {{if .Session}}{{if eq .Session.Role "admin"}}<a href="/admin/users">Users</a>{{end}}{{end}}
+      </nav>
+      <div class="header-right">
+        {{if .Session}}<a href="/logout" style="font-size:13px; color:var(--text-2); text-decoration:none">Sign Out
+          ({{.Session.Email}})</a>{{end}}
+        <button onclick="toggleTheme()" class="btn btn-ghost btn-sm" title="Toggle Theme" style="padding: .3rem .5rem">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <div class="header-meta">Last scan: <strong>{{.LastRun}}</strong></div>
+        {{if .Session}}{{if or (eq .Session.Role "admin") (eq .Session.Role "manager")}}
+        <button class="btn btn-primary" id="runNowBtn" onclick="triggerRunNow()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg> Run Now
+        </button>
+        {{end}}{{end}}
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="stats-grid">
+      <div class="stat-card stat-new">
+        <div class="stat-label">Total Findings</div>
+        <div class="stat-value" id="totalCount">{{.TotalFindings}}</div>
+        <div class="stat-sub">in current view</div>
+      </div>
+      <div class="stat-card stat-new">
+        <div class="stat-label">New (Last 24h)</div>
+        <div class="stat-value">{{.NewToday}}</div>
+        <div class="stat-sub">requiring attention</div>
+      </div>
+      <div class="stat-card stat-critical">
+        <div class="stat-label">Sources Monitored</div>
+        <div class="stat-value" style="color:var(--accent)">{{len .Sources}}</div>
+        <div class="stat-sub">technologies tracked</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last Scan</div>
+        <div class="stat-value" style="font-size:1rem;padding-top:.5rem">{{.LastRun}}</div>
+        <div class="stat-sub">scheduled daily midnight</div>
+      </div>
+    </div>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Source Status</h2>
+      </div>
+      <div class="sources-grid">
+        {{range .Sources}}
+        <a href="javascript:void(0)" onclick="toggleSourceFilter('{{.Name}}')"
+          class="source-card {{if .LastAttempt}}{{if .OK}}ok{{else}}err{{end}}{{else}}unknown{{end}} {{if eq $.SourceFilter .Name}}active-source{{end}}">
+          <div class="source-dot {{if .LastAttempt}}{{if .OK}}dot-ok{{else}}dot-err{{end}}{{else}}dot-unk{{end}}"></div>
+          <div class="source-info">
+            <div class="source-name">{{.Name}}</div>
+            <div class="source-meta">
+              {{if .LastAttempt}}Last: {{.LastAttempt}} {{if gt .FindingsThisRun 0}}<span
+                class="findings-badge">+{{.FindingsThisRun}}</span>{{end}}{{if not .OK}}<br><span
+                style="color:var(--crit);font-size:.72rem">{{.Error}}</span>{{end}}{{else}}<span
+                style="color:var(--text-3)">Pending first run</span>{{end}}
+            </div>
+          </div>
+        </a>
+        {{end}}
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Vulnerability Findings</h2>
+        <a href="/api/export.csv{{if .SeverityFilter}}?severity={{.SeverityFilter}}{{end}}"
+          class="btn btn-ghost btn-sm">Export CSV</a>
+      </div>
+
+      <div class="filters-bar">
+        <span class="filter-label">Filter:</span>
+        <form method="GET" action="/" style="display:contents" id="filterForm">
+          <select class="filter-select" name="severity" onchange="document.getElementById('filterForm').submit()">
+            <option value="" {{if eq .SeverityFilter "" }}selected{{end}}>All Severities</option>
+            <option value="CRITICAL" {{if eq .SeverityFilter "CRITICAL" }}selected{{end}}>Critical</option>
+            <option value="HIGH" {{if eq .SeverityFilter "HIGH" }}selected{{end}}>High</option>
+            <option value="MEDIUM" {{if eq .SeverityFilter "MEDIUM" }}selected{{end}}>Medium</option>
+            <option value="LOW" {{if eq .SeverityFilter "LOW" }}selected{{end}}>Low</option>
+          </select>
+          {{if .SourceFilter}}<input type="hidden" name="source" value="{{.SourceFilter}}">{{end}}
+        </form>
+        {{if .Session}}{{if or (eq .Session.Role "admin") (eq .Session.Role "manager")}}
+        <button class="btn btn-sm btn-primary" onclick="bulkAssign()" style="margin-left:auto">Bulk Assign
+          Selected</button>
+        {{end}}{{end}}
+      </div>
+
+      <div class="table-wrap">
+        {{if .Findings}}
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>CVE ID</th>
+              <th>Technology</th>
+              <th>Severity</th>
+              <th>Published</th>
+              <th>Description</th>
+              <th>Status / Tasks</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{range .Findings}}
+            <tr>
+              <td><input type="checkbox" class="bulk-cb" data-key="{{.DeduplicateKey}}" data-tech="{{.Technology}}"
+                  data-cve="{{.CVEID}}" data-sev="{{.Severity}}"></td>
+              <td>
+                {{if .URL}}<a class="cve-link" href="{{.URL}}" target="_blank">{{.CVEID}}</a>{{else}}<span
+                  class="cve-link" style="color:var(--text-2)">{{.CVEID}}</span>{{end}}
+              </td>
+              <td><span class="tech-tag">{{.Technology}}</span></td>
+              <td><span class="badge {{severityClass .Severity}}">{{.Severity}}</span></td>
+              <td style="font-size:0.85rem; color:var(--text-2)">
+                {{if not .Published.IsZero}}{{formatDateOnly .Published}}{{else}}-{{end}}
+              </td>
+              <td class="desc-cell">
+                <div class="truncate">{{.Description}}</div>
+              </td>
+              <td>
+                {{if hasTasks .Tasks}}
+                {{range .Tasks}}
+                <div class="task-badge task-{{.Status}}">{{.AssignedTo}} ({{.Status}})</div>
+                {{end}}
+                {{else}}
+                <span style="color:var(--text-3);font-size:12px">Unassigned</span>
+                {{end}}
+              </td>
+              <td>
+                {{if $.Session}}{{if or (eq $.Session.Role "admin") (eq $.Session.Role "manager")}}
+                <button class="btn btn-ghost btn-sm"
+                  onclick="openAssignModal('{{.DeduplicateKey}}', '{{.Technology}}', '{{.CVEID}}', '{{.Severity}}')">Assign</button>
+                {{end}}{{end}}
+              </td>
+            </tr>
+            {{end}}
+          </tbody>
+        </table>
+        {{else}}
+        <div class="empty-state"><strong>No findings match the current filters.</strong></div>
+        {{end}}
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Assign Modal -->
+  <div class="modal-overlay" id="assignModal">
+    <div class="modal">
+      <h3>Assign Task</h3>
+      <label>Assign To</label>
+      <select id="assignUser">
+        {{range .Users}}
+        <option value="{{.Email}}">{{.Email}} ({{.Role}})</option>
+        {{end}}
+      </select>
+      <label>Due Date (optional)</label>
+      <input type="date" id="assignDate">
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeAssignModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitAssign()">Assign</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const csrf = "{{.CSRFToken}}";
+    let currentAssign = null;
+    let bulkMode = false;
+
+    function triggerRunNow() {
+      const btn = document.getElementById('runNowBtn');
+      if (!btn) return;
+      btn.disabled = true;
+      fetch('/api/run-now', { method: 'POST', headers: { "X-CSRF-Token": csrf } })
+        .then(r => { if (r.ok) toast('Run triggered', 'success'); else toast('Failed to trigger', 'error'); })
+        .finally(() => btn.disabled = false);
+    }
+
+    function toggleSourceFilter(sourceName) {
+      const url = new URL(window.location.href);
+      if (!sourceName) url.searchParams.delete('source');
+      else url.searchParams.set('source', sourceName);
+      window.location.href = url.toString();
+    }
+
+    function openAssignModal(key, tech, cve, sev) {
+      currentAssign = { finding_key: key, technology: tech, cve_id: cve, severity: sev };
+      bulkMode = false;
+      document.getElementById('assignModal').style.display = 'flex';
+    }
+
+    function bulkAssign() {
+      const checked = Array.from(document.querySelectorAll('.bulk-cb:checked'));
+      if (checked.length === 0) return toast('No findings selected', 'error');
+
+      currentAssign = checked.map(cb => ({
+        FindingKey: cb.dataset.key,
+        Technology: cb.dataset.tech,
+        CVEID: cb.dataset.cve,
+        Severity: cb.dataset.sev
+      }));
+      bulkMode = true;
+      document.getElementById('assignModal').style.display = 'flex';
+    }
+
+    function closeAssignModal() {
+      document.getElementById('assignModal').style.display = 'none';
+    }
+
+    async function submitAssign() {
+      const assignedTo = document.getElementById('assignUser').value;
+      const dueDate = document.getElementById('assignDate').value || null;
+      if (!assignedTo) return toast('Select a user', 'error');
+
+      if (bulkMode) {
+        const res = await fetch('/api/tasks/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify({ findings: currentAssign, assigned_to: assignedTo, due_date: dueDate })
+        });
+        if (res.ok) { toast('Tasks created', 'success'); location.reload(); }
+        else toast('Failed to create tasks', 'error');
+      } else {
+        currentAssign.assigned_to = assignedTo;
+        currentAssign.due_date = dueDate;
+        const res = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify(currentAssign)
+        });
+        if (res.ok) { toast('Task created', 'success'); location.reload(); }
+        else toast('Failed to create task', 'error');
+      }
+      closeAssignModal();
+    }
+
+    function toast(msg, type = 'info') {
+      const c = document.getElementById('toastContainer');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+  </script>
+</body>
+
+</html>

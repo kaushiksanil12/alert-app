@@ -59,6 +59,7 @@ type dashboardData struct {
 	CSRFToken       string
 	SeverityFilter  string
 	SourceFilter    string
+	TimeFilter      string
 	ThisWeek        int
 	PreviousWeek    int
 	OlderFindings   int
@@ -92,6 +93,7 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sess := auth.SessionFromContext(r)
 	severityFilter := r.URL.Query().Get("severity")
 	sourceFilter := r.URL.Query().Get("source")
+	timeFilter := r.URL.Query().Get("time")
 
 	filter := store.FindingFilter{
 		Severity: severityFilter,
@@ -113,12 +115,41 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		taskMap[t.FindingKey] = append(taskMap[t.FindingKey], t)
 	}
 
+	now := time.Now()
+	thisWeekBoundary := now.AddDate(0, 0, -7)
+	prevWeekBoundary := now.AddDate(0, 0, -14)
+
+	var thisWeek, prevWeek, older int
 	var findings []findingRow
+
 	for _, f := range rawFindings {
-		findings = append(findings, findingRow{
-			StoredFinding: f,
-			Tasks:         taskMap[f.DeduplicateKey()],
-		})
+		isThisWeek := f.FirstSeen.After(thisWeekBoundary)
+		isPrevWeek := !isThisWeek && f.FirstSeen.After(prevWeekBoundary)
+		isOlder := !isThisWeek && !isPrevWeek
+
+		if isThisWeek {
+			thisWeek++
+		} else if isPrevWeek {
+			prevWeek++
+		} else {
+			older++
+		}
+
+		include := true
+		if timeFilter == "this_week" && !isThisWeek {
+			include = false
+		} else if timeFilter == "prev_week" && !isPrevWeek {
+			include = false
+		} else if timeFilter == "older" && !isOlder {
+			include = false
+		}
+
+		if include {
+			findings = append(findings, findingRow{
+				StoredFinding: f,
+				Tasks:         taskMap[f.DeduplicateKey()],
+			})
+		}
 	}
 
 	lastRun, _ := h.store.GetLastRunTime()
@@ -147,21 +178,6 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sources = append(sources, row)
 	}
 
-	now := time.Now()
-	thisWeekBoundary := now.AddDate(0, 0, -7)
-	prevWeekBoundary := now.AddDate(0, 0, -14)
-
-	var thisWeek, prevWeek, older int
-	for _, f := range rawFindings {
-		if f.FirstSeen.After(thisWeekBoundary) {
-			thisWeek++
-		} else if f.FirstSeen.After(prevWeekBoundary) {
-			prevWeek++
-		} else {
-			older++
-		}
-	}
-
 	var users []store.User
 	if sess != nil && (sess.Role == auth.RoleAdmin || sess.Role == auth.RoleManager) {
 		allUsers, _ := h.users.ListUsers()
@@ -184,6 +200,7 @@ func (h *DashboardHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		CSRFToken:      auth.CSRFToken(r),
 		SeverityFilter: severityFilter,
 		SourceFilter:   sourceFilter,
+		TimeFilter:     timeFilter,
 		ThisWeek:       thisWeek,
 		PreviousWeek:   prevWeek,
 		OlderFindings:  older,

@@ -108,13 +108,15 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 		if method == "GET" || method == "HEAD" || method == "OPTIONS" {
 			if _, err := r.Cookie(csrfCookieName); err != nil {
 				token, _ := generateCSRFToken()
-				http.SetCookie(w, &http.Cookie{
+				cookie := &http.Cookie{
 					Name:     csrfCookieName,
 					Value:    token,
 					Path:     "/",
 					SameSite: http.SameSiteStrictMode,
 					HttpOnly: false, // JS must be able to read for fetch() calls
-				})
+				}
+				http.SetCookie(w, cookie)
+				r.AddCookie(cookie)
 			}
 			next.ServeHTTP(w, r)
 			return

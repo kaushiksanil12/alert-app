@@ -96,6 +96,7 @@
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2.5rem; }
     .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 1.5rem; transition: border-color .2s, transform .2s, box-shadow .2s; }
     .stat-card:hover { border-color: var(--border-lit); transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); }
+    .stat-card.active-stat { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: rgba(0, 102, 255, 0.03); }
     .stat-label { font-size: .75rem; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: .5rem; font-weight: 500; }
     .stat-value { font-size: 2.25rem; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
     .stat-sub { font-size: .78rem; color: var(--text-3); margin-top: .5rem; font-weight: 300; }
@@ -216,9 +217,9 @@
 
 <main class="main">
   <div class="stats-grid">
-    <div class="stat-card stat-new"><div class="stat-label">This Week</div><div class="stat-value">{{.ThisWeek}}</div><div class="stat-sub">past 7 days</div></div>
-    <div class="stat-card"><div class="stat-label">Previous Week</div><div class="stat-value" style="color:var(--text-2)">{{.PreviousWeek}}</div><div class="stat-sub">7–14 days ago</div></div>
-    <div class="stat-card"><div class="stat-label">Older Findings</div><div class="stat-value" style="color:var(--text-3)">{{.OlderFindings}}</div><div class="stat-sub">14+ days ago</div></div>
+    <a href="javascript:void(0)" onclick="toggleTimeFilter('this_week')" class="stat-card stat-new {{if eq .TimeFilter "this_week"}}active-stat{{end}}" style="text-decoration:none; color:inherit;"><div class="stat-label">This Week</div><div class="stat-value">{{.ThisWeek}}</div><div class="stat-sub">past 7 days</div></a>
+    <a href="javascript:void(0)" onclick="toggleTimeFilter('prev_week')" class="stat-card {{if eq .TimeFilter "prev_week"}}active-stat{{end}}" style="text-decoration:none; color:inherit;"><div class="stat-label">Previous Week</div><div class="stat-value" style="color:var(--text-2)">{{.PreviousWeek}}</div><div class="stat-sub">7–14 days ago</div></a>
+    <a href="javascript:void(0)" onclick="toggleTimeFilter('older')" class="stat-card {{if eq .TimeFilter "older"}}active-stat{{end}}" style="text-decoration:none; color:inherit;"><div class="stat-label">Older Findings</div><div class="stat-value" style="color:var(--text-3)">{{.OlderFindings}}</div><div class="stat-sub">14+ days ago</div></a>
     <div class="stat-card stat-critical"><div class="stat-label">Sources Monitored</div><div class="stat-value" style="color:var(--accent)">{{len .Sources}}</div><div class="stat-sub">technologies tracked</div></div>
   </div>
 
@@ -248,7 +249,8 @@
     <div class="filters-bar">
       <span class="filter-label">Filter:</span>
       <form method="GET" action="/" style="display:contents" id="filterForm">
-        <select class="filter-select" name="severity" onchange="document.getElementById('filterForm').submit()">
+        {{if .TimeFilter}}<input type="hidden" name="time" value="{{.TimeFilter}}">{{end}}
+        <select name="severity" class="filter-select" onchange="document.getElementById('filterForm').submit()">
           <option value="" {{if eq .SeverityFilter ""}}selected{{end}}>All Severities</option>
           <option value="CRITICAL" {{if eq .SeverityFilter "CRITICAL"}}selected{{end}}>Critical</option>
           <option value="HIGH"     {{if eq .SeverityFilter "HIGH"}}selected{{end}}>High</option>
@@ -353,7 +355,16 @@
   function toggleSourceFilter(sourceName) {
     const url = new URL(window.location.href);
     if (!sourceName) url.searchParams.delete('source');
+    // If the same source is clicked again, we could toggle it off:
+    else if (url.searchParams.get('source') === sourceName) url.searchParams.delete('source');
     else url.searchParams.set('source', sourceName);
+    window.location.href = url.toString();
+  }
+
+  function toggleTimeFilter(timeVal) {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('time') === timeVal) url.searchParams.delete('time');
+    else url.searchParams.set('time', timeVal);
     window.location.href = url.toString();
   }
 

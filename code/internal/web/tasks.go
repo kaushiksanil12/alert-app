@@ -397,13 +397,12 @@ const tasksHTML = `<!DOCTYPE html>
       <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
       <td>
         <div class="td-actions">
-          <select class="status-sel" data-task-id="{{.ID}}" onchange="updateStatus(this)">
-            <option value="" disabled selected>Change status…</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Resolved</option>
-            <option value="wont_fix">Won't Fix</option>
-            <option value="ignored">Ignore</option>
+          <select class="status-sel" data-task-id="{{.ID}}" data-current="{{.Status}}" onchange="updateStatus(this)">
+            <option value="open" {{if eq .Status "open"}}selected{{end}}>Open</option>
+            <option value="in_progress" {{if eq .Status "in_progress"}}selected{{end}}>In Progress</option>
+            <option value="resolved" {{if eq .Status "resolved"}}selected{{end}}>Resolved</option>
+            <option value="wont_fix" {{if eq .Status "wont_fix"}}selected{{end}}>Won't Fix</option>
+            <option value="ignored" {{if eq .Status "ignored"}}selected{{end}}>Ignore</option>
           </select>
         </div>
       </td>
@@ -419,8 +418,15 @@ const tasksHTML = `<!DOCTYPE html>
     async function updateStatus(sel) {
       const id = sel.dataset.taskId;
       const status = sel.value;
-      if (!status) return;
+      const current = sel.dataset.current;
+      if (!status || status === current) return;
+      
       const note = prompt("Optional note for this status change (press OK to skip):", "");
+      if (note === null) {
+        sel.value = current;
+        return;
+      }
+
       const res = await fetch("/api/tasks/" + id + "/status", {
         method: "POST",
         headers: {"Content-Type":"application/json","X-CSRF-Token": csrf},
